@@ -10,8 +10,17 @@ export const getApiBaseUrl = (options?: { env?: NodeJS.ProcessEnv; location?: Lo
   const env = options?.env ?? process.env
   const override = env.NEXT_PUBLIC_API_BASE_URL?.trim()
   if (override) {
-    // normalize by trimming any trailing slash
-    return override.replace(/\/+$/, "")
+    const normalized = override.replace(/\/+$/, "")
+    try {
+      const parsed = new URL(normalized)
+      if (!parsed.protocol.startsWith("http")) {
+        console.warn("[urlHelpers] NEXT_PUBLIC_API_BASE_URL missing http/https protocol")
+      }
+      return parsed.origin
+    } catch {
+      console.warn("[urlHelpers] invalid NEXT_PUBLIC_API_BASE_URL:", normalized)
+      return normalized
+    }
   }
 
   const loc = getLocation(options?.location)

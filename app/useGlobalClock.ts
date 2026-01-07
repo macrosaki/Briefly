@@ -8,12 +8,18 @@ import { getApiBaseUrl, getClockWsUrl } from "./urlHelpers"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? getApiBaseUrl()
 const WS_URL =
-  process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
-    ? getClockWsUrl({ env: process.env })
-    : getClockWsUrl()
+  process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? (process.env.NEXT_PUBLIC_API_BASE_URL ? getClockWsUrl({ env: process.env }) : getClockWsUrl())
 const HTTP_URL =
   process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ??
-  (process.env.NEXT_PUBLIC_API_BASE_URL ? `${API_BASE}/clock` : getApiBaseUrl() + "/clock")
+  (process.env.NEXT_PUBLIC_API_BASE_URL ? `${API_BASE}/clock` : `${getApiBaseUrl()}/clock`)
+
+try {
+  const apiHost = new URL(API_BASE).host
+  const wsHost = WS_URL ? new URL(WS_URL).host.replace(/^wss?:\/\//, "") : "same-origin"
+  console.info(`[clock] resolved API host ${apiHost}, WS host ${wsHost}`)
+} catch (error) {
+  console.warn("[clock] URL resolution log skipped", error)
+}
 
 export const useGlobalClock = () => {
   const [clock, setClock] = useState<ClockState | null>(null)
