@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useGlobalClock } from "./useGlobalClock"
 
@@ -26,9 +26,7 @@ const formatCountdown = (ms: number) => {
 
 const triviaOptions = ["Orbit Club", "Lunar Bloom", "Solar Vibe", "Neon Echo"]
 
-export const dynamic = 'force-dynamic'
-
-export default function Page() {
+function PageContent() {
   const searchParams = useSearchParams()
   const debugEnabled = searchParams.get("debug") === "1"
   const { clock, now, latestResult, connectionStatus, retryCount, retry, lastMessageAt, lastError } =
@@ -314,5 +312,15 @@ export default function Page() {
         )}
       </div>
     </main>
+  )
+}
+
+export const dynamic = 'force-dynamic'
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
   )
 }
