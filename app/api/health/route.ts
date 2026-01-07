@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getApiBaseUrl } from "../../urlHelpers"
 
+export const runtime = 'edge'
+
 type HealthResult = {
   ok: boolean
   environment: {
