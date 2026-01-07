@@ -26,6 +26,8 @@ const formatCountdown = (ms: number) => {
 
 const triviaOptions = ["Orbit Club", "Lunar Bloom", "Solar Vibe", "Neon Echo"]
 
+export const dynamic = 'force-dynamic'
+
 export default function Page() {
   const searchParams = useSearchParams()
   const debugEnabled = searchParams.get("debug") === "1"
