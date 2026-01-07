@@ -53,16 +53,12 @@ jobs:
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
             echo "DNS record for api.brieflymade.com already exists"
           else
-            # Create CNAME record pointing to the worker
-            # For Workers, we use a special target format
+            # Create A record with dummy IP (Cloudflare will route via Workers route pattern)
+            # The IP doesn't matter since it's proxied - Cloudflare routes based on the route pattern in wrangler.toml
             curl -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
               -H "Content-Type: application/json" \
-              -d '{"type":"CNAME","name":"api","content":"100::","proxied":true}' || \
-            curl -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d '{"type":"A","name":"api","content":"100.64.0.1","proxied":true}'
+              -d '{"type":"A","name":"api","content":"192.0.2.1","proxied":true,"comment":"Worker route for api.brieflymade.com"}'
             echo "Created DNS record for api.brieflymade.com"
           fi
 
