@@ -26,13 +26,21 @@ const formatCountdown = (ms: number) => {
 const triviaOptions = ["Orbit Club", "Lunar Bloom", "Solar Vibe", "Neon Echo"]
 
 export default function Page() {
-  const { clock, now, latestResult } = useGlobalClock()
+  const { clock, now, latestResult, connectionStatus, retryCount, retry } = useGlobalClock()
   const [giftTrayOpen, setGiftTrayOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
   const countdown = formatCountdown(clock ? Math.max(0, clock.phaseEndsAt - now) : 0)
   const isEarn = clock?.phase === "EARN_TRIVIA"
   const phaseLabel = !clock ? "SYNCING" : isEarn ? "EARN" : "SPEND"
+  const isDisconnected = connectionStatus === "disconnected" || connectionStatus === "error"
+  const showRetry = isDisconnected && retryCount >= 5
+  const connectionMessage =
+    connectionStatus === "connected"
+      ? "Live"
+      : connectionStatus === "connecting"
+        ? "Connecting…"
+        : "Disconnected. Retrying…"
   const roundId = clock?.round?.id ?? 1
   const giftWindowId = clock?.giftWindowId ?? 1
 
@@ -52,6 +60,15 @@ export default function Page() {
         <div className="stage-meta">
           <p className="stage-phase-pill">{phaseLabel}</p>
           <p className="stage-countdown">{clock ? `next flip in ${countdown}` : "syncing clock..."}</p>
+          <p className={`connection-indicator ${isDisconnected ? "disconnected" : "connected"}`}>
+            {showRetry ? (
+              <>
+                Can&apos;t connect. <button onClick={retry}>Retry</button>
+              </>
+            ) : (
+              connectionMessage
+            )}
+          </p>
         </div>
         <h1 className="stage-heading">
           {isEarn ? `Trivia Round ${roundId}` : "Gift Spotlight"}

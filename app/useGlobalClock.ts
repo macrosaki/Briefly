@@ -4,20 +4,25 @@ import { useEffect, useRef, useState } from "react"
 import type { ClockMessage } from "../src/clock/messages"
 import type { ClockState } from "../src/clock/schedule"
 import type { TriviaResultPayload } from "../src/trivia/types"
+import { getApiBaseUrl, getClockWsUrl } from "./urlHelpers"
 
-const getDefaultWsUrl = () => {
-  if (typeof window === "undefined") return undefined
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws"
-  return `${protocol}://${window.location.host}/clock`
-}
-
-const WS_URL = process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? getDefaultWsUrl()
-const HTTP_URL = process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ?? (WS_URL ? WS_URL.replace(/^ws/, "http") : undefined)
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? getApiBaseUrl()
+const WS_URL =
+  process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
+    ? getClockWsUrl({ env: process.env })
+    : getClockWsUrl()
+const HTTP_URL =
+  process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ??
+  (process.env.NEXT_PUBLIC_API_BASE_URL ? `${API_BASE}/clock` : getApiBaseUrl() + "/clock")
 
 export const useGlobalClock = () => {
   const [clock, setClock] = useState<ClockState | null>(null)
   const [latestResult, setLatestResult] = useState<TriviaResultPayload | null>(null)
   const [now, setNow] = useState<number>(() => Date.now())
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "error"
+  >("connecting")
+  const [retryCount, setRetryCount] = useState(0)
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const offsetRef = useRef<number>(0)
 
@@ -29,6 +34,7 @@ export const useGlobalClock = () => {
   useEffect(() => {
     let socket: WebSocket | null = null
     let closed = false
+    let lastAttemptLogged = false
 
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -50,27 +56,54 @@ export const useGlobalClock = () => {
 
     const fetchSnapshot = async () => {
       if (!HTTP_URL) return
-      const response = await fetch(HTTP_URL, { cache: "no-store" })
-      if (!response.ok) return
-      const data = (await response.json()) as ClockState
-      offsetRef.current = data.now - Date.now()
-      setClock(data as ClockState)
+      try {
+        const response = await fetch(HTTP_URL, { cache: "no-store" })
+        if (!response.ok) return
+        const data = (await response.json()) as ClockState
+        offsetRef.current = data.now - Date.now()
+        setClock(data as ClockState)
+      } catch (error) {
+        console.warn("Snapshot fetch failed", error)
+      }
     }
 
-    const connect = () => {
-      if (!WS_URL) return
+    const scheduleReconnect = () => {
+      if (closed) return
+      const backoffMs = Math.min(10000, 500 * Math.pow(2, retryCount)) + Math.random() * 300
+      retryRef.current = setTimeout(() => {
+        setRetryCount((prev) => prev + 1)
+        connect(true)
+      }, backoffMs)
+    }
+
+    const connect = (isRetry = false) => {
+      if (!WS_URL) {
+        setConnectionStatus("error")
+        return
+      }
+      setConnectionStatus(isRetry ? "connecting" : "connecting")
+      if (!lastAttemptLogged) {
+        console.info("[clock] connecting", { WS_URL, HTTP_URL, API_BASE })
+        lastAttemptLogged = true
+      }
       socket = new WebSocket(WS_URL)
+      socket.addEventListener("open", () => {
+        setConnectionStatus("connected")
+        setRetryCount(0)
+      })
       socket.addEventListener("message", handleMessage)
       socket.addEventListener("close", () => {
         if (closed) return
-        retryRef.current = setTimeout(connect, 750)
+        setConnectionStatus("disconnected")
+        scheduleReconnect()
       })
       socket.addEventListener("error", () => {
+        setConnectionStatus("error")
         socket?.close()
       })
     }
 
-    fetchSnapshot().catch((error) => console.warn("Snapshot fetch failed", error))
+    fetchSnapshot()
     connect()
 
     return () => {
@@ -80,5 +113,10 @@ export const useGlobalClock = () => {
     }
   }, [])
 
-  return { clock, now, latestResult }
+  const forceRetry = () => {
+    if (retryRef.current) clearTimeout(retryRef.current)
+    setRetryCount((prev) => prev + 1)
+  }
+
+  return { clock, now, latestResult, connectionStatus, retryCount, retry: forceRetry }
 }
