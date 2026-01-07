@@ -1,0 +1,55 @@
+name = "briefly-clock"
+main = "src/worker.ts"
+compatibility_date = "2024-12-15"
+compatibility_flags = ["nodejs_compat", "durable_object_alarms"]
+route = "api.brieflymade.com/*"
+
+[durable_objects]
+bindings = [
+  { name = "GLOBAL_CLOCK", class_name = "GlobalClock" },
+  { name = "TRIVIA_SHARD", class_name = "TriviaVoteShard" },
+  { name = "TRIVIA_COORDINATOR", class_name = "TriviaCoordinator" },
+  { name = "AUTH", class_name = "AuthDurable" },
+  { name = "GIFT_EVENT", class_name = "GiftEvent" },
+  { name = "SPONSOR_QUEUE", class_name = "SponsorQueueDO" },
+  { name = "ADMIN_PANEL", class_name = "AdminPanel" },
+  { name = "WEEKLY_PAYOUT", class_name = "WeeklyPayoutDO" },
+]
+
+[vars]
+# Dev-only speed multiplier to accelerate the 10m/10m loop locally without changing SHOW_SPEC defaults.
+CLOCK_SPEED_MULTIPLIER = "1"
+VOTE_SHARD_COUNT = "4"
+SESSION_SECRET = "dev-secret"
+GIFT_DEFAULT_BALANCE = "10000"
+SPONSOR_APPROVAL_REQUIRED = "true"
+ADMIN_WALLETS = "admin-wallet-1,admin-wallet-2"
+MIN_PARTICIPATION_BID = "50"
+GLIMMER_PAYOUT_AMOUNT = "10"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GlobalClock", "TriviaVoteShard", "TriviaCoordinator"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["AuthDurable"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["GiftEvent"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["SponsorQueueDO"]
+
+[[migrations]]
+tag = "v5"
+new_sqlite_classes = ["AdminPanel"]
+
+[[migrations]]
+tag = "v6"
+new_sqlite_classes = ["WeeklyPayoutDO"]
+
+[observability]
+enabled = true
