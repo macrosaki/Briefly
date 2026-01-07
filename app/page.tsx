@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useGlobalClock } from "./useGlobalClock"
 
@@ -33,6 +33,9 @@ export default function Page() {
     useGlobalClock()
   const [giftTrayOpen, setGiftTrayOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [isWalletConnected, setIsWalletConnected] = useState(false)
+  const [bidAmount, setBidAmount] = useState("")
+  const [lastBidUpdate, setLastBidUpdate] = useState(0)
 
   const countdown = formatCountdown(clock ? Math.max(0, clock.phaseEndsAt - now) : 0)
   const isEarn = clock?.phase === "EARN_TRIVIA"
@@ -45,12 +48,38 @@ export default function Page() {
       : connectionStatus === "connecting"
         ? "Connecting…"
         : "Disconnected. Retrying…"
+  
+  const handleConnectWallet = () => {
+    // TODO: Implement actual wallet connection
+    setIsWalletConnected(true)
+  }
+
+  const handleBid = () => {
+    const amount = parseInt(bidAmount, 10)
+    if (isNaN(amount) || amount <= 0) return
+    // TODO: Implement actual bid submission
+    console.log("Bid submitted:", amount)
+    setBidAmount("")
+  }
+
+  const quickBidPresets = [50, 100, 250, 500]
   const roundId = clock?.round?.id ?? 1
   const giftWindowId = clock?.giftWindowId ?? 1
 
   const giftWindowLabel = useMemo(() => `Gift window #${giftWindowId}`, [giftWindowId])
 
   const highestBid = useMemo(() => 1240 + ((giftWindowId % 5) * 90), [giftWindowId])
+
+  useEffect(() => {
+    if (!isEarn && highestBid) {
+      setLastBidUpdate(Date.now())
+    }
+  }, [highestBid, isEarn])
+
+  const timeRemaining = clock ? Math.max(0, clock.phaseEndsAt - now) : 0
+  const secondsRemaining = Math.floor(timeRemaining / 1000)
+  const isFrantic = !isEarn && secondsRemaining <= 40 && secondsRemaining > 0
+  const isGiftStart = !isEarn && clock && now - (clock.phaseEndsAt - 600000) < 2000
 
   const voteShares = useMemo(
     () => triviaOptions.map((_, index) => 24 + (((clock?.round?.id ?? 1) + index * 3) % 30)),
@@ -61,6 +90,27 @@ export default function Page() {
     <main className="alive-stage" data-phase={phaseLabel.toLowerCase()}>
       <div className="stage-halo" />
       <div className="stage-content">
+        {(!clock || isDisconnected) && (
+          <div className="sync-overlay">
+            <div className="sync-content">
+              <h2 className="sync-title">
+                {!clock ? "SYNCING CLOCK" : "DISCONNECTED"}
+              </h2>
+              <p className="sync-message">
+                {!clock
+                  ? "Connecting to global show clock..."
+                  : showRetry
+                    ? "Can't connect to clock. Check your connection."
+                    : "Retrying connection..."}
+              </p>
+              {showRetry && (
+                <button className="sync-retry-btn" onClick={retry}>
+                  Retry Now
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="stage-meta">
           <p className="stage-phase-pill">{phaseLabel}</p>
           <p className="stage-countdown">{clock ? `next flip in ${countdown}` : "syncing clock..."}</p>
@@ -126,8 +176,8 @@ export default function Page() {
           ) : (
             <>
               <p className="panel-note">{giftWindowLabel} - 10:00 gift window</p>
-              <div className="gift-card">
-                <div className="gift-circle">
+              <div className={`gift-card ${isGiftStart ? "gift-slam-in" : ""} ${isFrantic ? "gift-frantic" : ""}`}>
+                <div className={`gift-circle ${lastBidUpdate > 0 ? "gift-ring-pulse" : ""}`} key={lastBidUpdate}>
                   <span className="gift-label">Now Live</span>
                   <strong className="gift-name">Prismatic Halo</strong>
                 </div>
@@ -140,6 +190,40 @@ export default function Page() {
                     <span>Highest bid</span>
                     <strong>{highestBid.toLocaleString()} pts</strong>
                   </div>
+                </div>
+                <div className="gift-action-section">
+                  {!isWalletConnected ? (
+                    <button className="gift-primary-btn" onClick={handleConnectWallet}>
+                      CONNECT WALLET TO BID
+                    </button>
+                  ) : (
+                    <div className="gift-bid-controls">
+                      <div className="gift-bid-input-group">
+                        <input
+                          type="number"
+                          className="gift-bid-input"
+                          placeholder="Enter bid amount"
+                          value={bidAmount}
+                          onChange={(e) => setBidAmount(e.target.value)}
+                          min="1"
+                        />
+                        <button className="gift-bid-submit" onClick={handleBid} disabled={!bidAmount}>
+                          BID
+                        </button>
+                      </div>
+                      <div className="gift-quick-bids">
+                        {quickBidPresets.map((preset) => (
+                          <button
+                            key={preset}
+                            className="gift-quick-bid"
+                            onClick={() => setBidAmount(preset.toString())}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
