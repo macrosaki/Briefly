@@ -1,6 +1,27 @@
 import { NextResponse } from "next/server"
 import { getApiBaseUrl } from "../../../urlHelpers"
-import type { ClockState } from "../../../src/clock/schedule"
+
+// Local type definition (src/clock is excluded from Next.js build)
+type ClockPhase = "SPEND_GIFT" | "EARN_TRIVIA"
+
+interface TriviaRoundState {
+  id: number
+  startedAt: number
+  endsAt: number
+  durationMs: number
+}
+
+interface ClockState {
+  now: number
+  phase: ClockPhase
+  phaseStartedAt: number
+  phaseEndsAt: number
+  giftWindowId: number
+  round: TriviaRoundState | null
+  roundsPerEarn: number
+  nextBoundaryAt: number
+  speedMultiplier: number
+}
 
 export async function GET(): Promise<NextResponse<ClockState | { error: string }>> {
   try {
