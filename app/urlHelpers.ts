@@ -24,7 +24,13 @@ export const getApiBaseUrl = (options?: { env?: NodeJS.ProcessEnv; location?: Lo
   }
 
   const loc = getLocation(options?.location)
-  if (loc) return loc.origin.replace(/\/+$/, "")
+  if (loc) {
+    // In production, if we're on brieflymade.com, use api.brieflymade.com
+    if (loc.host === "brieflymade.com" || loc.host === "www.brieflymade.com") {
+      return "https://api.brieflymade.com"
+    }
+    return loc.origin.replace(/\/+$/, "")
+  }
 
   // Fallback for non-browser environments (tests/SSR)
   return "http://localhost:3000"
