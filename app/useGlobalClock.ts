@@ -23,6 +23,8 @@ export const useGlobalClock = () => {
     "connecting" | "connected" | "disconnected" | "error"
   >("connecting")
   const [retryCount, setRetryCount] = useState(0)
+  const [lastMessageAt, setLastMessageAt] = useState<number | null>(null)
+  const [lastError, setLastError] = useState<string | null>(null)
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const offsetRef = useRef<number>(0)
 
@@ -42,15 +44,18 @@ export const useGlobalClock = () => {
         if (parsed.type === "snapshot" || parsed.type === "tick") {
           offsetRef.current = parsed.state.now - Date.now()
           setClock(parsed.state)
+          setLastMessageAt(Date.now())
           if ("latestResult" in parsed && parsed.latestResult) {
             setLatestResult(parsed.latestResult)
           }
         }
         if (parsed.type === "trivia_result") {
           setLatestResult(parsed.result)
+          setLastMessageAt(Date.now())
         }
       } catch (error) {
         console.warn("Discarding bad clock payload", error)
+        setLastError(error instanceof Error ? error.message : "unknown payload error")
       }
     }
 
@@ -64,6 +69,7 @@ export const useGlobalClock = () => {
         setClock(data as ClockState)
       } catch (error) {
         console.warn("Snapshot fetch failed", error)
+        setLastError(error instanceof Error ? error.message : "snapshot fetch failed")
       }
     }
 
@@ -79,6 +85,7 @@ export const useGlobalClock = () => {
     const connect = (isRetry = false) => {
       if (!WS_URL) {
         setConnectionStatus("error")
+        setLastError("No WebSocket URL")
         return
       }
       setConnectionStatus(isRetry ? "connecting" : "connecting")
@@ -99,6 +106,7 @@ export const useGlobalClock = () => {
       })
       socket.addEventListener("error", () => {
         setConnectionStatus("error")
+        setLastError("WebSocket error")
         socket?.close()
       })
     }

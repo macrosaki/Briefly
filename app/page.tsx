@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useGlobalClock } from "./useGlobalClock"
 
 const giftsBoughtToday = [
@@ -26,7 +27,10 @@ const formatCountdown = (ms: number) => {
 const triviaOptions = ["Orbit Club", "Lunar Bloom", "Solar Vibe", "Neon Echo"]
 
 export default function Page() {
-  const { clock, now, latestResult, connectionStatus, retryCount, retry } = useGlobalClock()
+  const searchParams = useSearchParams()
+  const debugEnabled = searchParams.get("debug") === "1"
+  const { clock, now, latestResult, connectionStatus, retryCount, retry, lastMessageAt, lastError } =
+    useGlobalClock()
   const [giftTrayOpen, setGiftTrayOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
@@ -147,6 +151,26 @@ export default function Page() {
         <button className="corner-pill" onClick={() => setGiftTrayOpen((prev) => !prev)}>
           Gifts bought today <span>{giftsBoughtToday.length}</span>
         </button>
+        {debugEnabled && (
+          <div className="floating-panel debug-panel">
+            <header>
+              <p>Debug HUD</p>
+            </header>
+            <ul>
+              <li>WS state: {connectionStatus}</li>
+              <li>Retry count: {retryCount}</li>
+              <li>Last message: {lastMessageAt ? new Date(lastMessageAt).toLocaleTimeString() : "—"}</li>
+              <li>Phase: {clock?.phase ?? "unknown"}</li>
+              <li>Ends at: {clock?.phaseEndsAt ? new Date(clock.phaseEndsAt).toLocaleTimeString() : "—"}</li>
+              <li>Last error: {lastError ?? "none"}</li>
+            </ul>
+            {showRetry && (
+              <button onClick={retry} className="corner-pill">
+                Retry now
+              </button>
+            )}
+          </div>
+        )}
         {giftTrayOpen && (
           <div className="floating-panel tray-panel">
             <header>
