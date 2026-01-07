@@ -105,14 +105,17 @@ export const useGlobalClock = () => {
         setRetryCount(0)
       })
       socket.addEventListener("message", handleMessage)
-      socket.addEventListener("close", () => {
+      socket.addEventListener("close", (event) => {
         if (closed) return
+        console.warn("[clock] WebSocket closed", { WS_URL, code: event.code, reason: event.reason, wasClean: event.wasClean })
         setConnectionStatus("disconnected")
+        setLastError(`Connection closed (code: ${event.code}${event.reason ? `, reason: ${event.reason}` : ""})`)
         scheduleReconnect()
       })
-      socket.addEventListener("error", () => {
+      socket.addEventListener("error", (event) => {
+        console.error("[clock] WebSocket error", { WS_URL, event })
         setConnectionStatus("error")
-        setLastError("WebSocket error")
+        setLastError(`WebSocket error: ${WS_URL}`)
         socket?.close()
       })
     }

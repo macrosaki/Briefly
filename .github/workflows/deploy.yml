@@ -47,17 +47,17 @@ jobs:
       - name: Build Next.js for Cloudflare Pages
         run: npx @cloudflare/next-on-pages@1
       
-      - name: Configure Pages project (production branch and compatibility flags)
+      - name: Configure Pages project (production branch, compatibility flags, and env vars)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           ACCOUNT_ID="238213a4ac12ca37e406b579c913cf79"
           PROJECT_NAME="briefly"
-          # Set production branch to master and enable nodejs_compat
+          # Set production branch to master, enable nodejs_compat, and set API base URL
           curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT_NAME}" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d '{"production_branch":"master","deployment_configs":{"production":{"compatibility_flags":["nodejs_compat"]},"preview":{"compatibility_flags":["nodejs_compat"]}}}'
+            -d '{"production_branch":"master","deployment_configs":{"production":{"compatibility_flags":["nodejs_compat"],"env_vars":{"NEXT_PUBLIC_API_BASE_URL":{"value":"https://api.brieflymade.com"}}},"preview":{"compatibility_flags":["nodejs_compat"],"env_vars":{"NEXT_PUBLIC_API_BASE_URL":{"value":"https://api.brieflymade.com"}}}}}'
       
       - name: Add custom domain to Pages project
         env:
