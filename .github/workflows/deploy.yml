@@ -50,16 +50,17 @@ jobs:
           NEXT_PUBLIC_CLOCK_HTTP_URL: https://api.brieflymade.com/clock
         run: npx @cloudflare/next-on-pages@1
       
-      - name: Enable nodejs_compat compatibility flag
+      - name: Configure Pages project (production branch and compatibility flags)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           ACCOUNT_ID="238213a4ac12ca37e406b579c913cf79"
           PROJECT_NAME="briefly"
+          # Set production branch to master and enable nodejs_compat
           curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects/${PROJECT_NAME}" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d '{"deployment_configs":{"production":{"compatibility_flags":["nodejs_compat"]},"preview":{"compatibility_flags":["nodejs_compat"]}}}'
+            -d '{"production_branch":"master","deployment_configs":{"production":{"compatibility_flags":["nodejs_compat"]},"preview":{"compatibility_flags":["nodejs_compat"]}}}'
       
       - name: Add custom domain to Pages project
         env:
@@ -81,5 +82,5 @@ jobs:
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler@4 pages deploy .vercel/output/static --project-name=briefly
+        run: npx wrangler@4 pages deploy .vercel/output/static --project-name=briefly --branch=master
 
