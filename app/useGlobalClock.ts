@@ -5,8 +5,14 @@ import type { ClockMessage } from "../src/clock/messages"
 import type { ClockState } from "../src/clock/schedule"
 import type { TriviaResultPayload } from "../src/trivia/types"
 
-const WS_URL = process.env.NEXT_PUBLIC_CLOCK_WS_URL
-const HTTP_URL = process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ?? (WS_URL ? WS_URL.replace("ws", "http") : undefined)
+const getDefaultWsUrl = () => {
+  if (typeof window === "undefined") return undefined
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws"
+  return `${protocol}://${window.location.host}/clock`
+}
+
+const WS_URL = process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? getDefaultWsUrl()
+const HTTP_URL = process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ?? (WS_URL ? WS_URL.replace(/^ws/, "http") : undefined)
 
 export const useGlobalClock = () => {
   const [clock, setClock] = useState<ClockState | null>(null)
