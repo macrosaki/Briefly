@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getApiBaseUrl } from "../../../urlHelpers"
+import { getApiBaseUrl } from "../../urlHelpers"
 
 type HealthResult = {
   ok: boolean
