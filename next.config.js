@@ -1,12 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Exclude Worker source code from Next.js build
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-    };
-    return config;
-  },
+  // Turbopack config (Next.js 16 uses Turbopack by default)
+  turbopack: {},
   // Exclude src directory from TypeScript compilation
   typescript: {
     ignoreBuildErrors: false,
