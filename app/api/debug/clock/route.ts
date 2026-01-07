@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getApiBaseUrl } from "../../urlHelpers"
+import { getApiBaseUrl } from "../../../urlHelpers"
 import type { ClockState } from "../../../src/clock/schedule"
 
 export async function GET(): Promise<NextResponse<ClockState | { error: string }>> {
