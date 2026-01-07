@@ -132,5 +132,5 @@ export const useGlobalClock = () => {
     setRetryCount((prev) => prev + 1)
   }
 
-  return { clock, now, latestResult, connectionStatus, retryCount, retry: forceRetry }
+  return { clock, now, latestResult, connectionStatus, retryCount, retry: forceRetry, lastMessageAt, lastError }
 }
