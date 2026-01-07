@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getApiBaseUrl } from "../../../urlHelpers"
 
+export const runtime = 'edge'
+
 // Local type definition (src/clock is excluded from Next.js build)
 type ClockPhase = "SPEND_GIFT" | "EARN_TRIVIA"
 
