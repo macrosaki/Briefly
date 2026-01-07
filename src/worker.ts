@@ -30,16 +30,33 @@ export interface Env extends ClockEnv {
   GLIMMER_PAYOUT_AMOUNT?: string
 }
 
-const handleClockRequest = (request: Request, env: Env) => {
+const handleClockRequest = async (request: Request, env: Env) => {
+  const origin = request.headers.get("Origin")
+  
+  // Handle CORS preflight
+  if (request.method === "OPTIONS") {
+    const preflight = handleCorsPreflight(origin)
+    if (preflight) return preflight
+  }
+  
   const id = env.GLOBAL_CLOCK.idFromName("global")
   const stub = env.GLOBAL_CLOCK.get(id)
-  return stub.fetch(request)
+  const response = await stub.fetch(request)
+  return addCorsHeaders(response, origin)
 }
 
-const health = (env: Env) => {
+const health = (request: Request, env: Env) => {
+  const origin = request.headers.get("Origin")
+  
+  // Handle CORS preflight
+  if (request.method === "OPTIONS") {
+    const preflight = handleCorsPreflight(origin)
+    if (preflight) return preflight
+  }
+  
   const config = buildClockConfig(env)
   const schedule = new ClockSchedule(config)
-  return new Response(
+  const response = new Response(
     JSON.stringify({
       ok: true,
       speedMultiplier: config.speedMultiplier,
@@ -49,6 +66,7 @@ const health = (env: Env) => {
       headers: { "content-type": "application/json" },
     },
   )
+  return addCorsHeaders(response, origin)
 }
 
 const parseOption = (input: string | undefined): VoteOption | null => {
@@ -137,19 +155,61 @@ const fetchAdminWallet = async (request: Request, env: Env): Promise<string | nu
   return data.wallet ?? null
 }
 
+const addCorsHeaders = (response: Response, origin: string | null): Response => {
+  const headers = new Headers(response.headers)
+  
+  // Allow requests from brieflymade.com and www.brieflymade.com
+  if (origin && (origin === "https://brieflymade.com" || origin === "https://www.brieflymade.com")) {
+    headers.set("Access-Control-Allow-Origin", origin)
+    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    headers.set("Access-Control-Allow-Credentials", "true")
+    headers.set("Access-Control-Max-Age", "86400")
+  }
+  
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
+const handleCorsPreflight = (origin: string | null): Response | null => {
+  if (origin && (origin === "https://brieflymade.com" || origin === "https://www.brieflymade.com")) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+      },
+    })
+  }
+  return null
+}
+
 const worker: ExportedHandler<Env> = {
   fetch(request, env) {
     const url = new URL(request.url)
+    const origin = request.headers.get("Origin")
+    
     if (url.pathname === "/clock") {
       return handleClockRequest(request, env)
     }
 
     if (url.pathname === "/health") {
-      return health(env)
+      return health(request, env)
     }
 
     if (url.pathname === "/vote") {
-      return handleVoteIngress(request, env)
+      // Handle CORS preflight
+      if (request.method === "OPTIONS") {
+        const preflight = handleCorsPreflight(origin)
+        if (preflight) return preflight
+      }
+      return handleVoteIngress(request, env).then((response) => addCorsHeaders(response, origin))
     }
 
     if (url.pathname.startsWith("/auth") || url.pathname === "/profile") {
