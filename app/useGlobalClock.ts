@@ -6,19 +6,24 @@ import type { ClockState } from "../src/clock/schedule"
 import type { TriviaResultPayload } from "../src/trivia/types"
 import { getApiBaseUrl, getClockWsUrl } from "./urlHelpers"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? getApiBaseUrl()
-const WS_URL =
-  process.env.NEXT_PUBLIC_CLOCK_WS_URL ?? (process.env.NEXT_PUBLIC_API_BASE_URL ? getClockWsUrl({ env: process.env }) : getClockWsUrl())
-const HTTP_URL =
-  process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ??
-  (process.env.NEXT_PUBLIC_API_BASE_URL ? `${API_BASE}/clock` : `${getApiBaseUrl()}/clock`)
-
-try {
-  const apiHost = new URL(API_BASE).host
-  const wsHost = WS_URL ? new URL(WS_URL).host.replace(/^wss?:\/\//, "") : "same-origin"
-  console.info(`[clock] resolved API host ${apiHost}, WS host ${wsHost}`)
-} catch (error) {
-  console.warn("[clock] URL resolution log skipped", error)
+const getUrls = () => {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? getApiBaseUrl()
+  const wsUrl =
+    process.env.NEXT_PUBLIC_CLOCK_WS_URL ??
+    (process.env.NEXT_PUBLIC_API_BASE_URL ? getClockWsUrl({ env: process.env }) : getClockWsUrl())
+  const httpUrl =
+    process.env.NEXT_PUBLIC_CLOCK_HTTP_URL ??
+    (process.env.NEXT_PUBLIC_API_BASE_URL ? `${apiBase}/clock` : `${getApiBaseUrl()}/clock`)
+  
+  try {
+    const apiHost = new URL(apiBase).host
+    const wsHost = wsUrl ? new URL(wsUrl).host.replace(/^wss?:\/\//, "") : "same-origin"
+    console.info(`[clock] resolved API host ${apiHost}, WS host ${wsHost}`)
+  } catch (error) {
+    console.warn("[clock] URL resolution log skipped", error)
+  }
+  
+  return { apiBase, wsUrl, httpUrl }
 }
 
 export const useGlobalClock = () => {
@@ -40,6 +45,7 @@ export const useGlobalClock = () => {
   }, [])
 
   useEffect(() => {
+    const { apiBase: API_BASE, wsUrl: WS_URL, httpUrl: HTTP_URL } = getUrls()
     let socket: WebSocket | null = null
     let closed = false
     let lastAttemptLogged = false
